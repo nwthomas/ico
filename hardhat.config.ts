@@ -23,6 +23,11 @@ const config: HardhatUserConfigExtended = {
         ? [process.env.RINKEBY_WALLET_PRIVATE_KEY]
         : [],
     },
+    hardhat: {
+      accounts: {
+        count: 400,
+      },
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

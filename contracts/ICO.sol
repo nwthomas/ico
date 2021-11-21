@@ -40,6 +40,7 @@ contract ICO is Ownable {
   event ClaimedTokens(address indexed claimingAddress, uint256 tokenAmount);
   event NewInvestment(address indexed purchaser, uint256 etherAmount);
   event NewPhase(Phases indexed phase);
+  event Refund(address indexed refundAddress, uint256 etherAmount);
 
   modifier hasBeenInitialized() {
     require(isInitialized, "ICO: not initialized");
@@ -108,6 +109,7 @@ contract ICO is Ownable {
     if (amountToReturn > 0) {
       (bool success, ) = msg.sender.call{ value: amountToReturn }("");
       require(success, "ICO: excess funds transfer failed");
+      emit Refund(msg.sender, amountToReturn);
     }
 
     emit NewInvestment(msg.sender, validContributionAmount);
@@ -179,26 +181,32 @@ contract ICO is Ownable {
     returns (uint256)
   {
     uint256 addressContributions = addressToContributions[msg.sender];
-    uint256 newContributionsTotal = addressContributions + _messageValue;
+    uint256 newAddressContributions = addressContributions + _messageValue;
+    uint256 newTotalContributions = totalContributions + _messageValue;
 
-    if (currentPhase == Phases.SEED) {
-      return
-        newContributionsTotal > SEED_CONTRIBUTIONS_PER_ADDRESS
-          ? newContributionsTotal - SEED_CONTRIBUTIONS_PER_ADDRESS
-          : 0;
-    } else if (currentPhase == Phases.GENERAL) {
-      return
-        newContributionsTotal > GENERAL_CONTRIBUTIONS_PER_ADDRESS
-          ? newContributionsTotal - GENERAL_CONTRIBUTIONS_PER_ADDRESS
-          : 0;
+    if (
+      currentPhase == Phases.SEED &&
+      newAddressContributions > SEED_CONTRIBUTIONS_PER_ADDRESS
+    ) {
+      return newAddressContributions - SEED_CONTRIBUTIONS_PER_ADDRESS;
+    } else if (
+      currentPhase == Phases.SEED &&
+      newTotalContributions > SEED_CONTRIBUTIONS_CAP
+    ) {
+      return newTotalContributions - SEED_CONTRIBUTIONS_CAP;
+    } else if (
+      currentPhase == Phases.GENERAL &&
+      newAddressContributions > GENERAL_CONTRIBUTIONS_PER_ADDRESS
+    ) {
+      return newAddressContributions - GENERAL_CONTRIBUTIONS_PER_ADDRESS;
+    } else if (
+      currentPhase == Phases.GENERAL &&
+      newTotalContributions > GENERAL_CONTRIBUTIONS_CAP
+    ) {
+      return newTotalContributions - GENERAL_CONTRIBUTIONS_CAP;
     }
 
-    // Covers general phase when the total ICO cap is all that matters
-    uint256 newTotalContributions = addressContributions + totalContributions;
-    return
-      newTotalContributions > GENERAL_CONTRIBUTIONS_CAP
-        ? newTotalContributions - GENERAL_CONTRIBUTIONS_CAP
-        : 0;
+    return 0;
   }
 
   /**
