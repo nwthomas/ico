@@ -29,21 +29,20 @@ contract ICO is Ownable {
   }
 
   Phases public currentPhase = Phases.SEED;
-  bool private initialized = false;
+  bool private isInitialized = false;
   bool public isPaused = false;
-  uint256 private raisedAmount = 0;
   address public tokenAddress;
+  uint256 private totalContributions = 0;
 
   mapping(address => uint256) public addressToContributions;
   mapping(address => bool) public approvedSeedInvestors;
 
+  event ClaimedTokens(address indexed claimingAddress, uint256 tokenAmount);
+  event NewInvestment(address indexed purchaser, uint256 etherAmount);
   event NewPhase(Phases indexed phase);
 
-  modifier hasContributions() {
-    require(
-      addressToContributions[msg.sender] > 0,
-      "ICO: address has no contributions"
-    );
+  modifier hasBeenInitialized() {
+    require(isInitialized, "ICO: not initialized");
     _;
   }
 
@@ -57,15 +56,10 @@ contract ICO is Ownable {
     _;
   }
 
-  modifier isInitialized() {
-    require(initialized, "ICO: not initialized");
-    _;
-  }
-
   modifier canContributeForCurrentPhase() {
     if (currentPhase == Phases.SEED) {
       require(
-        raisedAmount < SEED_CONTRIBUTIONS_CAP,
+        totalContributions < SEED_CONTRIBUTIONS_CAP,
         "ICO: phase contributions reached"
       );
       require(
@@ -74,7 +68,7 @@ contract ICO is Ownable {
       );
     } else if (currentPhase == Phases.GENERAL) {
       require(
-        raisedAmount < GENERAL_CONTRIBUTIONS_CAP,
+        totalContributions < GENERAL_CONTRIBUTIONS_CAP,
         "ICO: phase contributions reached"
       );
       require(
@@ -82,6 +76,7 @@ contract ICO is Ownable {
         "ICO: contribution maximum reached"
       );
     }
+
     _;
   }
 
@@ -93,67 +88,57 @@ contract ICO is Ownable {
   function buyTokens()
     external
     payable
-    isInitialized
+    hasBeenInitialized
     isNotPaused
     canContributeForCurrentPhase
   {
     uint256 amountToReturn = _getExcessEtherToReturn(msg.value);
     uint256 validContributionAmount = msg.value - amountToReturn;
     addressToContributions[msg.sender] += validContributionAmount;
-    raisedAmount += validContributionAmount;
+    totalContributions += validContributionAmount;
 
     if (amountToReturn > 0) {
       (bool success, ) = msg.sender.call{ value: amountToReturn }("");
       require(success, "ICO: excess funds transfer failed");
     }
+
+    emit NewInvestment(msg.sender, validContributionAmount);
   }
 
-  function claimTokens() external isInitialized isOpenPhase hasContributions {
+  function claimTokens() external hasBeenInitialized isOpenPhase {
+    require(
+      addressToContributions[msg.sender] > 0,
+      "ICO: address has no contributions"
+    );
+
     uint256 amountToTransfer = addressToContributions[msg.sender] * 5 * 10**18;
     IERC20(tokenAddress).transfer(msg.sender, amountToTransfer);
+    emit ClaimedTokens(msg.sender, amountToTransfer);
   }
 
-  /**
-   * @notice Initializes the contract whenever owner address wants ICO to start
-   */
   function initialize() external onlyOwner {
-    initialized = true;
+    isInitialized = true;
   }
 
-  /**
-   * @notice Allows the owner to progress the ICO through its phases
-   * @dev The contract cannot move back in phases, only forward
-   */
-  function progressPhases() external onlyOwner isInitialized {
+  function progressPhases() external onlyOwner hasBeenInitialized {
     require(currentPhase != Phases.OPEN, "ICO: phases complete");
 
     currentPhase = Phases(uint256(currentPhase) + 1);
     emit NewPhase(currentPhase);
   }
 
-  /**
-   * @notice Toggles pausing the ICO contract
-   */
-  function toggleIsPaused() external onlyOwner isInitialized {
+  function toggleIsPaused() external onlyOwner hasBeenInitialized {
     isPaused = !isPaused;
   }
 
-  /**
-   * @notice Toggles whether or not a given address is eligible for seed phase investment
-   */
   function toggleSeedInvestor(address seedInvestor) external onlyOwner {
     approvedSeedInvestors[seedInvestor] = !approvedSeedInvestors[seedInvestor];
   }
 
-  /**
-   * @notice Private method to calculate the exact amount of ether to return (if any)
-   * @param _messageValue The ether derived from msg.value
-   */
   function _getExcessEtherToReturn(uint256 _messageValue)
     private
     view
-    isInitialized
-    isNotPaused
+    hasBeenInitialized
     canContributeForCurrentPhase
     returns (uint256)
   {
@@ -173,10 +158,10 @@ contract ICO is Ownable {
     }
 
     // Covers general phase when the total ICO cap is all that matters
-    uint256 newRaisedAmount = addressContributions + raisedAmount;
+    uint256 newTotalContributions = addressContributions + totalContributions;
     return
-      newRaisedAmount > GENERAL_CONTRIBUTIONS_CAP
-        ? newRaisedAmount - GENERAL_CONTRIBUTIONS_CAP
+      newTotalContributions > GENERAL_CONTRIBUTIONS_CAP
+        ? newTotalContributions - GENERAL_CONTRIBUTIONS_CAP
         : 0;
   }
 
