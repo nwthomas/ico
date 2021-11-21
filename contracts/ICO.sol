@@ -29,10 +29,10 @@ contract ICO is Ownable {
   }
 
   Phases public currentPhase = Phases.SEED;
-  bool private isInitialized = false;
+  bool public isInitialized = false;
   bool public isPaused = false;
   address public tokenAddress;
-  uint256 private totalContributions = 0;
+  uint256 public totalContributions = 0;
 
   mapping(address => uint256) public addressToContributions;
   mapping(address => bool) public approvedSeedInvestors;
@@ -80,11 +80,6 @@ contract ICO is Ownable {
     _;
   }
 
-  constructor(address _tokenAddress) {
-    require(_tokenAddress != address(0), "ICO: address must be valid");
-    tokenAddress = _tokenAddress;
-  }
-
   function buyTokens()
     external
     payable
@@ -116,7 +111,9 @@ contract ICO is Ownable {
     emit ClaimedTokens(msg.sender, amountToTransfer);
   }
 
-  function initialize() external onlyOwner {
+  function initialize(address _tokenAddress) external onlyOwner {
+    require(_tokenAddress != address(0), "ICO: address must be valid");
+    tokenAddress = _tokenAddress;
     isInitialized = true;
   }
 
