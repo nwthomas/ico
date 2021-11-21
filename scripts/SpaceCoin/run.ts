@@ -8,7 +8,7 @@ async function main() {
     icoAddress.address
   );
   await spaceCoin.deployed();
-  console.log("Project deployed to:", spaceCoin.address);
+  console.log("SpaceCoin deployed to:", spaceCoin.address);
 
   console.log(
     ethers.utils.formatEther(await spaceCoin.balanceOf(icoAddress.address))
