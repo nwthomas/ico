@@ -61,6 +61,36 @@ describe("SpaceCoin", () => {
       const icoAddress = await spaceCoin.icoAddress();
       expect(icoAddress).to.equal(icoAccount.address);
     });
+
+    it("throws an error if the treasury address is 0x0", async () => {
+      let error;
+      try {
+        await getDeployedSpaceCoinContract({
+          treasuryAddress: "0x0000000000000000000000000000000000000000",
+        });
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(
+        String(error).indexOf("SpaceCoin: address must not be 0") > -1
+      ).to.equal(true);
+    });
+
+    it("throws an error if the ICO address is 0x0", async () => {
+      let error;
+      try {
+        await getDeployedSpaceCoinContract({
+          icoAddress: "0x0000000000000000000000000000000000000000",
+        });
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(
+        String(error).indexOf("SpaceCoin: address must not be 0") > -1
+      ).to.equal(true);
+    });
   });
 
   describe("ownership", () => {

@@ -169,7 +169,70 @@ describe("ICO", () => {
   });
 
   describe("progressPhases", () => {
-    // finish
+    it("allows progressing phases", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract();
+      await icoContract.initialize(spaceCoinContract.address);
+
+      let currentPhaseTxn = await icoContract.currentPhase();
+      expect(currentPhaseTxn).to.equal(0); // SEED
+
+      await icoContract.progressPhases();
+      currentPhaseTxn = await icoContract.currentPhase();
+      expect(currentPhaseTxn).to.equal(1); // GENERAL
+
+      await icoContract.progressPhases();
+      currentPhaseTxn = await icoContract.currentPhase();
+      expect(currentPhaseTxn).to.equal(2); // OPEN
+    });
+
+    it("throws if an attempt is made to progress past open phase", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract();
+      await icoContract.initialize(spaceCoinContract.address);
+
+      await icoContract.progressPhases();
+      await icoContract.progressPhases();
+
+      let error;
+      try {
+        await icoContract.progressPhases();
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(String(error).indexOf("ICO: phases complete") > -1).to.equal(true);
+    });
+
+    it("throws error if non-owner address calls it", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract();
+      await icoContract.initialize(spaceCoinContract.address);
+
+      let error;
+      try {
+        await icoContract.connect(account3).progressPhases();
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(
+        String(error).indexOf("Ownable: caller is not the owner") > -1
+      ).to.equal(true);
+    });
+
+    it("throws error if contract is not initialized", async () => {
+      const icoContract = await getDeployedICOContract();
+
+      let error;
+      try {
+        await icoContract.progressPhases();
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(String(error).indexOf("ICO: not initialized") > -1).to.equal(true);
+    });
   });
 
   describe("toggleIsPaused", () => {

@@ -80,6 +80,12 @@ contract ICO is Ownable {
     _;
   }
 
+  /**
+   * @notice Allows users to buy tokens under the following conditions:
+   *    - For seed phase, they must be approved and under 1,500 ether limit
+   *    - For general phase, they must be under the 1,000 limit (inclusive of seed)
+   * @dev
+   */
   function buyTokens()
     external
     payable
@@ -107,7 +113,8 @@ contract ICO is Ownable {
     );
 
     uint256 amountToTransfer = addressToContributions[msg.sender] * 5 * 10**18;
-    IERC20(tokenAddress).transfer(msg.sender, amountToTransfer);
+    bool success = IERC20(tokenAddress).transfer(msg.sender, amountToTransfer);
+    require(success, "ICO: tokens could not be claimed");
     emit ClaimedTokens(msg.sender, amountToTransfer);
   }
 
@@ -124,7 +131,7 @@ contract ICO is Ownable {
     emit NewPhase(currentPhase);
   }
 
-  function toggleIsPaused() external onlyOwner hasBeenInitialized {
+  function toggleIsPaused() external onlyOwner {
     isPaused = !isPaused;
   }
 
@@ -162,6 +169,9 @@ contract ICO is Ownable {
         : 0;
   }
 
+  /**
+   * @dev This method has been specifically disallowed in favor of the buyTokens function
+   */
   receive() external payable {
     revert("ICO: use buyTokens function");
   }

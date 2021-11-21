@@ -25,6 +25,11 @@ contract SpaceCoin is Ownable, ERC20 {
   constructor(address _treasuryAddress, address _icoAddress)
     ERC20("Space Coin", "SPC")
   {
+    require(
+      _treasuryAddress != address(0) && _icoAddress != address(0),
+      "SpaceCoin: address must not be 0"
+    );
+
     icoAddress = _icoAddress;
     treasuryAddress = _treasuryAddress;
     _mint(_icoAddress, MAX_SUPPLY);
