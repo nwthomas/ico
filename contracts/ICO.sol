@@ -81,10 +81,17 @@ contract ICO is Ownable {
   }
 
   /**
-   * @notice Allows users to buy tokens under the following conditions:
+   * @notice Allows users to buy tokens in the ICO
+   * @dev Addresses can participate under the following conditions:
    *    - For seed phase, they must be approved and under 1,500 ether limit
    *    - For general phase, they must be under the 1,000 limit (inclusive of seed)
-   * @dev
+   * In addition, the private method _getExcessEtherToReturn checks if the address should have
+   * ether returned to it with the following constraints:
+   *    - If msg.value puts address partly over max individual contribution limit for phase,
+   *      the excess is returned
+   *    - If the msg.value puts the address partly over the max contribution limit for the phase,
+   *      the excess is returned
+   * If there is excess ether to return, that call is made immediately
    */
   function buyTokens()
     external
@@ -106,6 +113,9 @@ contract ICO is Ownable {
     emit NewInvestment(msg.sender, validContributionAmount);
   }
 
+  /**
+   * @notice Allows addresses that participated in the ICO to claim tokens in open phase
+   */
   function claimTokens() external hasBeenInitialized isOpenPhase {
     require(
       addressToContributions[msg.sender] > 0,
@@ -118,12 +128,21 @@ contract ICO is Ownable {
     emit ClaimedTokens(msg.sender, amountToTransfer);
   }
 
+  /**
+   * @notice Allows the owner to initialized (e.g. start) the ICO contract
+   * @param _tokenAddress The deployed token address to be used in the ICO
+   */
   function initialize(address _tokenAddress) external onlyOwner {
     require(_tokenAddress != address(0), "ICO: address must be valid");
     tokenAddress = _tokenAddress;
     isInitialized = true;
   }
 
+  /**
+   * @notice Allows the owner to progress the phases of the ICO if contract has been initialized
+   * @dev The phases cannot be progressed past open phase, nor can they be reversed once moved
+   * forward
+   */
   function progressPhases() external onlyOwner hasBeenInitialized {
     require(currentPhase != Phases.OPEN, "ICO: phases complete");
 
@@ -131,14 +150,27 @@ contract ICO is Ownable {
     emit NewPhase(currentPhase);
   }
 
+  /**
+   * @notice Allows the owner to pause/unpause the ICO
+   */
   function toggleIsPaused() external onlyOwner {
     isPaused = !isPaused;
   }
 
-  function toggleSeedInvestor(address seedInvestor) external onlyOwner {
-    approvedSeedInvestors[seedInvestor] = !approvedSeedInvestors[seedInvestor];
+  /**
+   * @notice Allows the owner to toggle on/off if another address is a seed investor
+   * @param _seedInvestor The address to toggle on/off
+   */
+  function toggleSeedInvestor(address _seedInvestor) external onlyOwner {
+    approvedSeedInvestors[_seedInvestor] = !approvedSeedInvestors[
+      _seedInvestor
+    ];
   }
 
+  /**
+   * @notice Returns the excess amount of ether to return to a given address
+   * @param _messageValue The msg.value that the address sent
+   */
   function _getExcessEtherToReturn(uint256 _messageValue)
     private
     view
