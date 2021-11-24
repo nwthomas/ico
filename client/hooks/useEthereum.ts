@@ -29,18 +29,36 @@ export const useEthereum = () => {
   const [isMiningError, setIsMiningError] = React.useState(false);
   const [isMiningSuccess, setIsMiningSuccess] = React.useState(false);
 
-  // Account variables
+  // State variables
   const [currentAccount, setCurrentAccount] = React.useState<string | null>(
     null
   );
   const [allAccounts, setAllAccounts] = React.useState<string[]>([]);
+  const [ethContributions, setEthContributions] = React.useState<number | null>(
+    null
+  );
 
-  // Fetch all default characters and big boss from contract on load of app
+  // Fetch all on-load data necessary for app
   React.useEffect(() => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const icoContract = new ethers.Contract(CONTRACT_ADDRESS, ico.abi, signer);
-  }, [isMiningSuccess]);
+
+    const fetchTokenBalance = async () => {
+      if (currentAccount) {
+        try {
+          const balance = await icoContract.addressToContributions(
+            currentAccount
+          );
+          setEthContributions(parseFloat(ethers.utils.formatEther(balance)));
+        } catch (error) {
+          setErrorMessage("Error fetching token count");
+        }
+      }
+    };
+
+    fetchTokenBalance();
+  }, [currentAccount]);
 
   // Attempt to connect to the Ethereum network and wallet on load of app
   React.useEffect(() => {
@@ -108,6 +126,7 @@ export const useEthereum = () => {
     allAccounts,
     currentAccount,
     errorMessage,
+    ethContributions,
     isConnected,
     isInitialized,
     isMining,
