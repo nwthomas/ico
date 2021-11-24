@@ -47,6 +47,11 @@ contract ICO is Ownable {
     _;
   }
 
+  modifier hasNotBeenInitialized() {
+    require(!isInitialized, "ICO: has been initialized");
+    _;
+  }
+
   modifier isNotPaused() {
     require(!isPaused, "ICO: the ICO is paused");
     _;
@@ -135,10 +140,14 @@ contract ICO is Ownable {
 
   /**
     emit TokensClaimed(msg.sender, amountToTransfer);
-   * @notice Allows the owner to initialized (e.g. start) the ICO contract
+   * @notice Allows the owner to initialize (e.g. start) the ICO contract
    * @param _tokenAddress The deployed token address to be used in the ICO
    */
-  function initialize(address _tokenAddress) external onlyOwner {
+  function initialize(address _tokenAddress)
+    external
+    onlyOwner
+    hasNotBeenInitialized
+  {
     require(_tokenAddress != address(0), "ICO: address must be valid");
     tokenAddress = _tokenAddress;
     isInitialized = true;
