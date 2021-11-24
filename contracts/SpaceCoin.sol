@@ -80,4 +80,12 @@ contract SpaceCoin is Ownable, ERC20 {
 
     super._transfer(_from, _to, _amount);
   }
+
+  function increaseApproval() external {
+    // finish
+  }
+
+  function decreaseApproval() external {
+    // finish
+  }
 }

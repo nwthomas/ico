@@ -37,10 +37,10 @@ contract ICO is Ownable {
   mapping(address => uint256) public addressToContributions;
   mapping(address => bool) public approvedSeedInvestors;
 
-  event ClaimedTokens(address indexed claimingAddress, uint256 tokenAmount);
   event NewInvestment(address indexed purchaser, uint256 etherAmount);
   event NewPhase(Phases indexed phase);
   event Refund(address indexed refundAddress, uint256 etherAmount);
+  event TokensClaimed(address indexed claimingAddress, uint256 tokenAmount);
 
   modifier hasBeenInitialized() {
     require(isInitialized, "ICO: not initialized");
@@ -67,6 +67,10 @@ contract ICO is Ownable {
         addressToContributions[msg.sender] < SEED_CONTRIBUTIONS_PER_ADDRESS,
         "ICO: contribution maximum reached"
       );
+      require(
+        approvedSeedInvestors[msg.sender],
+        "ICO: address is not approved"
+      );
     } else if (currentPhase == Phases.GENERAL) {
       require(
         totalContributions < GENERAL_CONTRIBUTIONS_CAP,
@@ -77,7 +81,6 @@ contract ICO is Ownable {
         "ICO: contribution maximum reached"
       );
     }
-
     _;
   }
 
@@ -124,13 +127,14 @@ contract ICO is Ownable {
       "ICO: address has no contributions"
     );
 
-    uint256 amountToTransfer = addressToContributions[msg.sender] * 5 * 10**18;
+    uint256 amountToTransfer = addressToContributions[msg.sender] * 5;
     bool success = IERC20(tokenAddress).transfer(msg.sender, amountToTransfer);
     require(success, "ICO: tokens could not be claimed");
-    emit ClaimedTokens(msg.sender, amountToTransfer);
+    emit TokensClaimed(msg.sender, amountToTransfer);
   }
 
   /**
+    emit TokensClaimed(msg.sender, amountToTransfer);
    * @notice Allows the owner to initialized (e.g. start) the ICO contract
    * @param _tokenAddress The deployed token address to be used in the ICO
    */

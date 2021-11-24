@@ -114,10 +114,27 @@ describe("ICO", () => {
   });
 
   describe("buyTokens", () => {
-    it("allows addresses to invest funds in the ICO", async () => {
+    it("allows addresses to invest funds in the ICO seed phase if approved", async () => {
       const icoContract = await getDeployedICOContract();
       const spaceCoinContract = await getDeployedSpaceCoinContract();
       await icoContract.initialize(spaceCoinContract.address);
+      await icoContract.toggleSeedInvestor(account2.address);
+
+      await icoContract
+        .connect(account2)
+        .buyTokens({ value: ethers.utils.parseEther("10") });
+
+      const addressContributions = await icoContract.addressToContributions(
+        account2.address
+      );
+      expect(addressContributions).to.equal(ethers.utils.parseEther("10"));
+    });
+
+    it("allows addresses to invest funds in the ICO general phase", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract();
+      await icoContract.initialize(spaceCoinContract.address);
+      await icoContract.progressPhases();
 
       await icoContract
         .connect(account2)
@@ -134,12 +151,15 @@ describe("ICO", () => {
       const spaceCoinContract = await getDeployedSpaceCoinContract();
       await icoContract.initialize(spaceCoinContract.address);
 
+      await icoContract.toggleSeedInvestor(account1.address);
       await icoContract.buyTokens({ value: ethers.utils.parseEther("10") });
 
+      await icoContract.toggleSeedInvestor(account2.address);
       await icoContract
         .connect(account2)
         .buyTokens({ value: ethers.utils.parseEther("10") });
 
+      await icoContract.toggleSeedInvestor(account3.address);
       await icoContract
         .connect(account3)
         .buyTokens({ value: ethers.utils.parseEther("10") });
@@ -148,7 +168,7 @@ describe("ICO", () => {
       expect(totalContributionsTxn).to.equal(ethers.utils.parseEther("30"));
     });
 
-    it("throws error is contract is not initialized", async () => {
+    it("throws error if contract is not initialized", async () => {
       const icoContract = await getDeployedICOContract();
 
       let error;
@@ -186,6 +206,7 @@ describe("ICO", () => {
       const icoContract = await getDeployedICOContract();
       const spaceCoinContract = await getDeployedSpaceCoinContract();
       await icoContract.initialize(spaceCoinContract.address);
+      await icoContract.progressPhases();
 
       const buyTokenTxn = await icoContract.buyTokens({
         value: ethers.utils.parseEther("10"),
@@ -200,6 +221,7 @@ describe("ICO", () => {
       const spaceCoinContract = await getDeployedSpaceCoinContract();
       await icoContract.initialize(spaceCoinContract.address);
 
+      await icoContract.toggleSeedInvestor(account1.address);
       await icoContract.buyTokens({
         value: ethers.utils.parseEther("10"),
       });
@@ -216,12 +238,14 @@ describe("ICO", () => {
       await icoContract.initialize(spaceCoinContract.address);
 
       for (let i = 0; i < 15; i++) {
+        await icoContract.toggleSeedInvestor(remainingAccounts[i].address);
         await remainingAccounts[i].sendTransaction({
           to: account1.address,
           value: ethers.utils.parseEther("100"),
         });
       }
 
+      await icoContract.toggleSeedInvestor(account1.address);
       await icoContract.buyTokens({
         value: ethers.utils.parseEther("1500"),
       });
@@ -246,6 +270,7 @@ describe("ICO", () => {
       await icoContract.initialize(spaceCoinContract.address);
 
       for (let i = 0; i < 150; i++) {
+        await icoContract.toggleSeedInvestor(remainingAccounts[i].address);
         await icoContract.connect(remainingAccounts[i]).buyTokens({
           value: ethers.utils.parseEther("100"),
         });
@@ -253,6 +278,7 @@ describe("ICO", () => {
 
       let error;
       try {
+        await icoContract.toggleSeedInvestor(account1.address);
         await icoContract.buyTokens({
           value: ethers.utils.parseEther("0.01"),
         });
@@ -328,12 +354,14 @@ describe("ICO", () => {
       await icoContract.initialize(spaceCoinContract.address);
 
       for (let i = 0; i < 15; i++) {
+        await icoContract.toggleSeedInvestor(remainingAccounts[i].address);
         await remainingAccounts[i].sendTransaction({
           to: account1.address,
           value: ethers.utils.parseEther("100"),
         });
       }
 
+      await icoContract.toggleSeedInvestor(account1.address);
       await icoContract.buyTokens({
         value: ethers.utils.parseEther("1499"),
       });
@@ -358,11 +386,13 @@ describe("ICO", () => {
       await icoContract.initialize(spaceCoinContract.address);
 
       for (let i = 0; i < 150; i++) {
+        await icoContract.toggleSeedInvestor(remainingAccounts[i].address);
         await icoContract.connect(remainingAccounts[i]).buyTokens({
           value: ethers.utils.parseEther(i !== 149 ? "100" : "99"),
         });
       }
 
+      await icoContract.toggleSeedInvestor(account1.address);
       const refundTxn = await icoContract.buyTokens({
         value: ethers.utils.parseEther("100"),
       });
@@ -376,16 +406,67 @@ describe("ICO", () => {
   });
 
   describe("claimTokens", () => {
-    it("transfers tokens to valid address in correct amount", async () => {
-      // finish
+    it("transfers tokens to valid address in correct amount when taxes are on", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract({
+        icoAddress: icoContract.address,
+      });
+      await icoContract.initialize(spaceCoinContract.address);
+      await icoContract.toggleSeedInvestor(account3.address);
+
+      await icoContract
+        .connect(account3)
+        .buyTokens({ value: ethers.utils.parseEther("10") });
+
+      await icoContract.progressPhases();
+      await icoContract.progressPhases();
+
+      await icoContract.connect(account3).claimTokens();
+
+      const balanceTxn = await spaceCoinContract.balanceOf(account3.address);
+      expect(balanceTxn).to.equal(ethers.utils.parseEther("49"));
     });
 
-    it("emits event on transfer", async () => {
-      // finish
+    it("transfers tokens to valid address in correct amount when taxes are off", async () => {
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract({
+        icoAddress: icoContract.address,
+      });
+      await icoContract.initialize(spaceCoinContract.address);
+      await icoContract.toggleSeedInvestor(account3.address);
+      await spaceCoinContract.toggleIsTaxingTokens();
+
+      await icoContract
+        .connect(account3)
+        .buyTokens({ value: ethers.utils.parseEther("10") });
+
+      await icoContract.progressPhases();
+      await icoContract.progressPhases();
+
+      await icoContract.connect(account3).claimTokens();
+
+      const balanceTxn = await spaceCoinContract.balanceOf(account3.address);
+      expect(balanceTxn).to.equal(ethers.utils.parseEther("50"));
     });
 
     it("throws error if address has not contributions", async () => {
-      // finish
+      const icoContract = await getDeployedICOContract();
+      const spaceCoinContract = await getDeployedSpaceCoinContract();
+      await icoContract.initialize(spaceCoinContract.address);
+
+      await icoContract.progressPhases();
+      await icoContract.progressPhases();
+
+      let error;
+      try {
+        await icoContract.claimTokens();
+      } catch (newError) {
+        error = newError;
+      }
+
+      expect(
+        String(error).indexOf("ICO: address has no contributions") > -1
+      ).to.equal(true);
     });
 
     it("throws error if contract is not initialized", async () => {
