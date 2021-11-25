@@ -88,6 +88,7 @@ export const useEthereum = () => {
   React.useEffect(() => {
     // Set listener to handle account changes
     window.ethereum.on("accountsChanged", (accounts: string[]) => {
+      setEthContributions(null);
       setCurrentAccount(accounts[0]);
     });
 
@@ -121,6 +122,37 @@ export const useEthereum = () => {
     }
   }, []);
 
+  const contributeEther = React.useCallback((etherAmount: number) => {
+    try {
+      const { ethereum } = window;
+
+      if (!ethereum) {
+        setErrorMessage(errorMessages.NO_METAMASK);
+        return;
+      }
+
+      const buyTokens = async () => {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const icoContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          ico.abi,
+          signer
+        );
+        await icoContract.buyTokens({ value: etherAmount });
+
+        const balance = await icoContract.addressToContributions(
+          currentAccount
+        );
+        setEthContributions(parseFloat(ethers.utils.formatEther(balance)));
+      };
+
+      buyTokens();
+    } catch (error) {
+      console.log({ error: error.message });
+    }
+  }, []);
+
   return {
     // Variables
     allAccounts,
@@ -136,5 +168,6 @@ export const useEthereum = () => {
     // Functions
     changeAccount: setCurrentAccount,
     connectToWallet,
+    contributeEther,
   };
 };

@@ -8,12 +8,17 @@ const TWITTER_HANDLE = "nwthomas_";
 const TWITTER_URL = `https://www.twitter.com/${TWITTER_HANDLE}`;
 
 function App() {
-  const { ethContributions, currentAccount, connectToWallet } = useEthereum();
+  const { contributeEther, ethContributions, currentAccount, connectToWallet } =
+    useEthereum();
 
   let buttonLabel = "Connect Wallet";
   if (currentAccount) {
     buttonLabel = "Purchase Tokens";
   }
+
+  const handleContributeEther = () => {
+    contributeEther(1000000000);
+  };
 
   return (
     <>
@@ -28,7 +33,11 @@ function App() {
             ethContributions * 5
           } tokens)`}</h2>
         ) : null}
-        <button onClick={connectToWallet}>{buttonLabel}</button>
+        <button
+          onClick={currentAccount ? handleContributeEther : connectToWallet}
+        >
+          {buttonLabel}
+        </button>
         <a href={TWITTER_URL}>{`Built by ${TWITTER_HANDLE}`}</a>
       </RootStyles>
     </>
