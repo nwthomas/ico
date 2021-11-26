@@ -47,3 +47,7 @@ These final parameters were discovered upon discussion and examination:
 ## DESIGN EXERCISE
 
 The base requirements give contributors their SPC tokens immediately. How would you design your contract to vest the awarded tokens instead, i.e. award tokens to users over time?
+
+```
+
+```

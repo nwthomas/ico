@@ -62,6 +62,13 @@ describe("SpaceCoin", () => {
       expect(icoAddress).to.equal(icoAccount.address);
     });
 
+    it("mints 500,000 tokens on deploy", async () => {
+      const spaceCoin = await getDeployedSpaceCoinContract();
+
+      const balanceTxn = await spaceCoin.balanceOf(icoAccount.address);
+      expect(balanceTxn).to.equal(ethers.utils.parseEther("500000"));
+    });
+
     it("throws an error if the treasury address is 0x0", async () => {
       let error;
       try {
