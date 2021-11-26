@@ -2,6 +2,7 @@ import * as React from "react";
 import { ethers } from "ethers";
 import ico from "../constants/ico.json";
 import { CONTRACT_ADDRESS } from "../constants";
+const { BigNumber } = ethers;
 
 // This is a shim to extend the Window object with the methods used in this component from
 // MetaMask extension
@@ -40,6 +41,13 @@ export const useEthereum = () => {
 
   // Fetch all on-load data necessary for app
   React.useEffect(() => {
+    const { ethereum } = window;
+
+    if (!ethereum) {
+      setErrorMessage(errorMessages.NO_METAMASK);
+      return;
+    }
+
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const icoContract = new ethers.Contract(CONTRACT_ADDRESS, ico.abi, signer);
@@ -58,7 +66,7 @@ export const useEthereum = () => {
     };
 
     fetchTokenBalance();
-  }, [currentAccount]);
+  }, [currentAccount, isMiningSuccess]);
 
   // Attempt to connect to the Ethereum network and wallet on load of app
   React.useEffect(() => {
@@ -122,16 +130,20 @@ export const useEthereum = () => {
     }
   }, []);
 
-  const contributeEther = React.useCallback((etherAmount: number) => {
-    try {
-      const { ethereum } = window;
+  const contributeEther = React.useCallback((etherAmount: string) => {
+    setIsMiningError(false);
+    setIsMiningSuccess(false);
+    setErrorMessage(null);
 
-      if (!ethereum) {
-        setErrorMessage(errorMessages.NO_METAMASK);
-        return;
-      }
+    const { ethereum } = window;
+    if (!ethereum) {
+      setErrorMessage(errorMessages.NO_METAMASK);
+      return;
+    }
 
-      const buyTokens = async () => {
+    const buyTokens = async () => {
+      try {
+        setIsMining(true);
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
         const icoContract = new ethers.Contract(
@@ -139,18 +151,18 @@ export const useEthereum = () => {
           ico.abi,
           signer
         );
-        await icoContract.buyTokens({ value: etherAmount });
+        await icoContract.buyTokens({
+          value: ethers.utils.parseEther(etherAmount),
+        });
+        setIsMiningSuccess(true);
+      } catch (error: any) {
+        setIsMining(false);
+        setIsMiningError(true);
+        setErrorMessage(error?.error?.message);
+      }
+    };
 
-        const balance = await icoContract.addressToContributions(
-          currentAccount
-        );
-        setEthContributions(parseFloat(ethers.utils.formatEther(balance)));
-      };
-
-      buyTokens();
-    } catch (error) {
-      console.log({ error: error.message });
-    }
+    buyTokens();
   }, []);
 
   return {

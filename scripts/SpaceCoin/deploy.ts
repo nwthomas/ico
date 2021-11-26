@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 // Set these before deploy
 const TREASURY_ADDRESS = "0xD840826A87b9f246Db5999604440Ca067BDD9FFd";
-const ICO_ADDRESS = "0xcBEabff9B256e95441f52a81789E4A7077A85A55";
+const ICO_ADDRESS = "0x4F1DB9c3f63118d0A0Dd20172203aad2380A2996";
 
 async function main() {
   const SpaceCoinFactory = await ethers.getContractFactory("SpaceCoin");
