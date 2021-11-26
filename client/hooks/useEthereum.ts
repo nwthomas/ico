@@ -98,15 +98,10 @@ export const useEthereum = () => {
     window.ethereum.on("accountsChanged", (accounts: string[]) => {
       setEthContributions(null);
       setCurrentAccount(accounts[0]);
-    });
-
-    // Set listener to handle network changes
-    window.ethereum.on("networkChanged", (networkId: number) => {
-      if (networkId === 4) {
-        setIsConnected(true);
-      } else {
-        setIsConnected(false);
-      }
+      setErrorMessage(null);
+      setIsMiningError(false);
+      setIsMiningSuccess(false);
+      setIsMining(false);
     });
   }, []);
 
