@@ -49,5 +49,7 @@ These final parameters were discovered upon discussion and examination:
 The base requirements give contributors their SPC tokens immediately. How would you design your contract to vest the awarded tokens instead, i.e. award tokens to users over time?
 
 ```
+If we were to award tokens over time, we could simply track both the amount contributed as well as when they contributed the ether (such as in a struct). Then we could have a getter function that would return a boolean on if the user had tokens to claim (and would perhaps call a private function or use a modifier to check if this was the case).
 
+The user could then call a public function to claim their tokens once they have vested.
 ```
